@@ -5,7 +5,13 @@
 **a. Initial design**
 
 - Briefly describe your initial UML design.
+
+The UML design should contain info about pet tasks,
+information about the pet owner, and then it should
+generate a daily task schedule that incorporates both information and ideally explains why it chose that setup. 
+
 - What classes did you include, and what responsibilities did you assign to each?
+It makes sense to have the set 
 
 **b. Design changes**
 

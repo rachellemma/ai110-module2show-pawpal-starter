@@ -45,6 +45,37 @@ Accepts any list of schedule-item dicts and returns plain-text warning strings f
 
 ---
 
+## Testing PawPal+
+
+### How to run the tests
+
+```bash
+python -m pytest tests/test_pawpal.py -v
+```
+
+### What the tests cover
+
+| Area | Tests | What is verified |
+|------|-------|-----------------|
+| **Sorting correctness** | 5 | High priority ranks before medium/low; within the same priority, morning → afternoon → evening → any; an empty list returns safely; the original list is never mutated |
+| **Recurrence logic** | 5 | Daily tasks gain a copy due tomorrow; weekly tasks due in 7 days; as-needed tasks produce no follow-up; all original fields (duration, priority, preferred_time) carry over; only the first matching incomplete task is completed |
+| **Conflict detection** | 5 | No false positives on a clean build_schedule output; exact-same-start flagged; partial overlaps flagged; back-to-back tasks (touching but not overlapping) pass cleanly; three mutually-overlapping tasks produce three warnings |
+| **Edge cases** | 4 | Pet with no tasks → empty schedule; two same-preference tasks get distinct start times; max_tasks_per_day cap respected; a task too long for the window is dropped |
+
+**Total: 22 tests** (including 2 original baseline tests).
+
+### Bug found during testing
+
+Writing the recurrence tests uncovered an infinite loop in `mark_completed` (`pawpal_system.py`): the method iterated over `pet.tasks` while appending to it, so the newly-queued task was immediately re-processed. Fixed by iterating over `list(pet.tasks)` (a snapshot) and returning after the first match.
+
+### Confidence level
+
+**★★★★☆ (4 / 5)**
+
+The core scheduling contract — sort order, time-window placement, recurrence, and conflict detection — is well-covered and all 22 tests pass. One star is withheld because the Streamlit UI layer (`app.py`) has no automated tests, and real-world inputs (e.g. malformed time strings, missing fields from the form) are not yet validated at the boundary.
+
+---
+
 ## Getting started
 
 ### Setup

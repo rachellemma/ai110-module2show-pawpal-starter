@@ -203,13 +203,14 @@ class DailyScheduler:
             task_description: Exact description string of the task to complete.
         """
         for pet in self.owner.pets:
-            for task in pet.tasks:
+            for task in list(pet.tasks):  # snapshot: avoid iterating a list we're appending to
                 if task.description == task_description and not task.completed:
                     task.mark_complete()
                     days_ahead = self._RECURRENCE_DAYS.get(task.frequency)
                     if days_ahead is not None:
                         next_due = datetime.date.today() + datetime.timedelta(days=days_ahead)
                         pet.add_task(replace(task, completed=False, due_date=next_due))
+                    return  # stop after first match (docstring: "first incomplete task")
 
     def reset_all(self):
         """Reset all tasks to incomplete (start of new day)."""

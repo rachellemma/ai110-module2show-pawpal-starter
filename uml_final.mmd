@@ -1,0 +1,55 @@
+classDiagram
+    class Task {
+        +String description
+        +int duration_minutes
+        +String priority
+        +String preferred_time
+        +String frequency
+        +bool completed
+        +date due_date
+        +is_high_priority() bool
+        +mark_complete()
+        +reset()
+    }
+
+    class Pet {
+        +String name
+        +String species
+        +int age
+        +List~String~ special_needs
+        +List~Task~ tasks
+        +add_task(task: Task)
+        +get_pending_tasks() List~Task~
+        +describe() String
+    }
+
+    class Owner {
+        +String name
+        +String available_start
+        +String available_end
+        +int max_tasks_per_day
+        +List~Pet~ pets
+        +add_pet(pet: Pet)
+        +get_all_tasks() List~Tuple~
+        +get_available_window() int
+    }
+
+    class DailyScheduler {
+        +Owner owner
+        +build_schedule() List~dict~
+        +sort_by_time(tasks: List) List
+        +filter_by_pet(pet_name: String) List
+        +filter_by_status(completed: bool) List
+        +filter_by_priority(level: String) List
+        +mark_completed(task_description: String)
+        +detect_conflicts(schedule: List) List~String~
+        +reset_all()
+        +explain_plan() String
+        -_explain(pet, task, start_time) String
+        -_to_minutes(time_str: String) int
+        -_to_time_str(minutes: int) String
+    }
+
+    Pet "1" *-- "0..*" Task : owns
+    Owner "1" *-- "1..*" Pet : manages
+    DailyScheduler "1" --> "1" Owner : schedules for

@@ -45,13 +45,11 @@ else:
 
 st.divider()
 
-# --- Add a Task to a Pet ---
+# --- Add a Task ---
 st.subheader("Add a Task")
 
-if not st.session_state.owner.pets:
-    st.warning("Add a pet first before adding tasks.")
-else:
-    pet_names = [p.name for p in st.session_state.owner.pets]
+if st.session_state.owner.pets:
+    pet_names = [pet.name for pet in st.session_state.owner.pets]
 
     col1, col2 = st.columns(2)
     with col1:
@@ -83,17 +81,20 @@ else:
                 st.success(f"Added '{task_description}' to {selected_pet}!")
                 break
 
-    # Show all pending tasks
-    all_tasks = st.session_state.owner.get_all_tasks()
+    # Show all pending tasks, sorted by priority then time slot
+    scheduler = st.session_state.scheduler
+    all_tasks = scheduler.sort_by_time(st.session_state.owner.get_all_tasks())
+
     if all_tasks:
-        st.markdown("**Pending tasks:**")
+        PRIORITY_ICON = {"high": "🔴", "medium": "🟡", "low": "🟢"}
+        st.markdown("**Pending tasks** *(sorted by priority, then preferred time)*:")
         rows = [
             {
                 "Pet": pet.name,
                 "Task": task.description,
-                "Duration (min)": task.duration_minutes,
-                "Priority": task.priority,
+                "Priority": f"{PRIORITY_ICON[task.priority]} {task.priority}",
                 "Preferred time": task.preferred_time,
+                "Duration (min)": task.duration_minutes,
                 "Frequency": task.frequency,
             }
             for pet, task in all_tasks
@@ -101,6 +102,8 @@ else:
         st.table(rows)
     else:
         st.info("No tasks yet. Add one above.")
+else:
+    st.info("Add a pet first before adding tasks.")
 
 st.divider()
 
@@ -108,16 +111,45 @@ st.divider()
 st.subheader("Build Schedule")
 
 if st.button("Generate schedule"):
-    scheduler = DailyScheduler(st.session_state.owner)
+    scheduler = st.session_state.scheduler
     schedule = scheduler.build_schedule()
 
     if not schedule:
         st.warning("No tasks could be scheduled. Add pets and tasks first.")
     else:
-        st.success("Here is today's plan:")
-        for item in schedule:
-            st.markdown(
-                f"**{item['start']}** — [{item['pet']}] {item['task']} "
-                f"({item['duration_minutes']} min, {item['frequency']})"
+        # --- Conflict check — show before the plan so the owner can act on it ---
+        conflicts = scheduler.detect_conflicts(schedule)
+        if conflicts:
+            st.error(
+                f"⚠️ **{len(conflicts)} scheduling conflict{'s' if len(conflicts) > 1 else ''} detected** — "
+                "two or more tasks overlap in time. Review the warnings below, then adjust task "
+                "durations or preferred time slots before relying on this plan."
             )
-            st.caption(item["reason"])
+            with st.expander("Show conflict details", expanded=True):
+                for warning in conflicts:
+                    # Strip the leading "WARNING: " prefix for cleaner display
+                    clean = warning.removeprefix("WARNING: ")
+                    st.warning(f"🕐 {clean}")
+        else:
+            st.success(f"Today's plan is ready — {len(schedule)} task{'s' if len(schedule) > 1 else ''} scheduled, no conflicts.")
+
+        # --- Schedule table ---
+        PRIORITY_ICON = {"high": "🔴", "medium": "🟡", "low": "🟢"}
+        rows = [
+            {
+                "Start": item["start"],
+                "Pet": item["pet"],
+                "Task": item["task"],
+                "Duration (min)": item["duration_minutes"],
+                "Priority": f"{PRIORITY_ICON[item['priority']]} {item['priority']}",
+                "Frequency": item["frequency"],
+            }
+            for item in schedule
+        ]
+        st.table(rows)
+
+        # --- Per-task reasoning ---
+        with st.expander("Why was each task scheduled this way?"):
+            for item in schedule:
+                st.markdown(f"**{item['start']} · {item['pet']} · {item['task']}**")
+                st.caption(item["reason"])

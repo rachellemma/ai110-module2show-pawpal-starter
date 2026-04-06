@@ -22,6 +22,29 @@ Your final app should:
 - Display the plan clearly (and ideally explain the reasoning)
 - Include tests for the most important scheduling behaviors
 
+## Smarter Scheduling
+
+The scheduler has been extended with four algorithmic improvements beyond the original priority sort:
+
+### Sort by time (`sort_by_time`)
+Tasks are ordered by a two-key lambda: **priority first** (high → medium → low), then **time slot** (morning → afternoon → evening → any). This replaces the original single-key sort and ensures that two high-priority tasks are always sequenced by their preferred window rather than insertion order.
+
+### Filter by pet and status (`filter_by_pet`, `filter_by_status`)
+`filter_by_pet(name)` returns only pending tasks for one specific pet, useful for a per-pet view in the UI. `filter_by_status(completed)` walks every task on every pet regardless of pending status, making it easy to show a "done today" list alongside the remaining to-do items.
+
+### Recurring task auto-scheduling (`mark_completed`)
+When a `daily` or `weekly` task is marked complete, a new copy is automatically queued for the next occurrence using Python's `timedelta`:
+- `daily` → due tomorrow (`today + timedelta(days=1)`)
+- `weekly` → due in seven days (`today + timedelta(days=7)`)
+- `as-needed` → no follow-up created
+
+The new task is built with `dataclasses.replace()` so all original fields carry over unchanged.
+
+### Conflict detection (`detect_conflicts`)
+Accepts any list of schedule-item dicts and returns plain-text warning strings for overlapping time blocks. Uses `itertools.combinations` to check every unique pair with the standard interval-overlap condition (`A.start < B.end and B.start < A.end`). Returns an empty list (no crash) when the schedule is clean.
+
+---
+
 ## Getting started
 
 ### Setup
